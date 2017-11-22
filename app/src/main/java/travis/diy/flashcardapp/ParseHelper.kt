@@ -154,8 +154,7 @@ fun parseEntry(pageStr: String,word: String) : Entry?
     //target is to retrieve the ==German==..... section
    val germanSectionMatchResult = nSectionRegex(2)
            .findAll(pageStr)
-           .filter{matchResult ->  matchResult.groups["tag"]!!.value == "German"}
-           .firstOrNull()
+           .firstOrNull{matchResult ->  matchResult.groups["tag"]!!.value == "German"}
            ?:return null
     return parseLanguageSection(germanSectionMatchResult,word)
 }

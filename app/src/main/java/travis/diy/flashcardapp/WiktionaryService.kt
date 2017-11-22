@@ -35,12 +35,18 @@ class WiktionaryService {
                 {
                     override fun onResponse(call: Call?, response: Response?)
                     {
-                        val parsedResponse = parseResponse(response)
+                        val content = response?.body()?.string()?:run{
+                            subscriber.onError(Throwable(Error.BAD_RESPONSE.toString()))
+                            return
+                        }
+                        val parsedResponse = parseResponse(content)
                         when (parsedResponse)
                         {
                             is Error -> subscriber.onError(Throwable(parsedResponse.toString()))
                             is Entry -> subscriber.onNext(parsedResponse)
                         }
+                        // should have nothing else coming, notify the subscriber
+                        subscriber.onCompleted()
                     }
 
                     override fun onFailure(call: Call?, e: IOException?)
@@ -63,42 +69,30 @@ class WiktionaryService {
     }
 
 
-    private fun parseResponse(response: Response?): Any
+    private fun parseResponse(content: String): Any
     {
-        // check if the response is null / successful
-        response?:return Error.BAD_RESPONSE
-        if(!response.isSuccessful) return Error.BAD_RESPONSE
-
         // parse response as object
         val obj = DocumentBuilderFactory.newInstance()
                 .newDocumentBuilder()
                 .parse(InputSource(
                         StringReader(
-                                response.body()?.string()
+                                content
                         )
                 ))
 
         // get the title of the word
         val title = obj.getElementsByTagName("page").item(0).attributes.getNamedItem("title").nodeValue
-        val dictString = obj.getElementsByTagName("rev").item(0).nodeValue
+        val dictString = obj.getElementsByTagName("rev").item(0).textContent
         // TODO: parse this string
         // TODO: remove me
         // TODO: how about adding listener to call for event?
         return parseEntry(dictString,title)?:Error.NOT_GERMAN //TODO: how do you even know what has gone wrong if you get a null?
     }
 
-    // functions for parsing strings with known tags
-    private fun String.replaceDoubleBracketSingleStroke() : String =
-            """\{\{[\w&&[^|]&&[-]]\}\}"""
-            .toRegex()
-            .replace(this,"")
-
-
-    fun searchWord(str: String,subscriber: Subscriber<out Entry?>) : Observable<out Entry?>?
+    fun search(str: String,mapAndSubscription: (Observable<in Entry?>) -> Subscription)
     {
-//        subscription = createQueryObservableWithString(str)?.subscribe(subscriber)
-        //TODO: this
-        return null
+        val observable = createQueryObservableWithString(str)
+        if (observable != null) subscription = mapAndSubscription(observable)
     }
 
 }
