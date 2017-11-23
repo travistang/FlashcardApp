@@ -69,6 +69,30 @@ fun parseLanguageSection(deContent: String,word: String): Entry?
     }
     if ((tag == null) or (content == null)) return null
     // work on each sub items, starting with *
+
+    /*
+        General information for words in any form
+
+     */
+    /*
+        subSentenceMap is now a map with a list of attributes of the double curly brackets found in each "subsentence" (separated by "#")
+        for the above example, this should now be:
+        mapOf(
+            listOf("de-verb-strong","class=4","verspricht","versprach","versprochen"...) to "",
+            listOf("lb","de","transitive") to "to promise",
+        )
+
+        All sub-sentences without a double-curly bracket are dropped as they do not match the regex in parseSubSentences
+    */
+    val subSentenceMap = content!!.split("#").mapNotNull(parseSubSentences)
+    var meaning : MutableList<String> = mutableListOf() // list of meaning, will be concatenated by ";"
+
+    if (subSentenceMap.isEmpty())
+    {
+        // TODO: probably no word form input... Allow listener as input and call it when this encounters to request another entry
+        // TODO: still parse the entry and try to get the original word form directly
+        return null
+    }
     when (tag)
     {
         "Verb" ->
@@ -81,31 +105,9 @@ fun parseLanguageSection(deContent: String,word: String): Entry?
                 #: ''Ich '''verspreche''' es dir.''
                 #:: I '''promise''' you. (''Literally:'' I promise it to you.)
                 ...
-
-
              */
-            val subSentenceMap = content!!.split("#").mapNotNull(parseSubSentences)
-            /*
-                subSentenceMap is now a map with a list of attributes of the double curly brackets found in each "subsentence" (separated by "#")
-                for the above example, this should now be:
-                mapOf(
-                    listOf("de-verb-strong","class=4","verspricht","versprach","versprochen"...) to "",
-                    listOf("lb","de","transitive") to "to promise",
-                )
-
-                All sub-sentences without a double-curly bracket are dropped as they do not match the regex in parseSubSentences
-
-            */
-
-            var meaning : MutableList<String> = mutableListOf() // list of meaning, will be concatenated by ";"
             var formDict : MutableMap<String,String> = mutableMapOf()
 
-            if (subSentenceMap.isEmpty())
-            {
-                // TODO: probably no word form input... Allow listener as input and call it when this encounters to request another entry
-                // TODO: still parse the entry and try to get the original word form directly
-                return null
-            }
             subSentenceMap.forEach{
                 (dcParts,subsentenceContent) ->
                 when
@@ -146,7 +148,47 @@ fun parseLanguageSection(deContent: String,word: String): Entry?
                 return null // some attributes are missing
             }
         }
-        // TODO: complete other word form as well. Now test the verb-parsing first
+
+        "Noun" ->
+        {
+            // TODO: parse a noun entry
+            var genitive : String? = null
+            var plural : String? = null
+            var meaning: List<String>? = null
+            subSentenceMap.forEachIndexed{
+                i,(dcParts,subsentenceContent) ->
+                when
+                {
+                    dcParts[0] == "de-noun" ->
+                    {
+                        genitive = dcParts[2].replace("^.*=","")
+                        plural = dcParts[3]
+                        // keep retrieving the meaning until a "star" is seen at the beginning of the sentence
+                        meaning = content!!.split("#")
+                                .subList(i + 1,content!!.count { c -> c == '#'})
+                                .takeWhile { part -> part[0] != '*' }
+                        return try {
+                             Noun(
+                                     word = word,
+                                     meaning = meaning!!,
+                                     gender = when (dcParts[1]){
+                                         "f" -> Gender.DIE
+                                         "m" -> Gender.DER
+                                         "n" -> Gender.DAS
+                                         else -> return null
+                                     },
+                                     plural = plural!!,
+                                     genitive = genitive!!
+                            )
+                        }catch( _ : Throwable) { return null}
+                    }
+                }
+            }
+            return null // no sub-sentences, wtf..
+        } // end of noun-parsing
+
+//        "Adjective" ->
+        // TODO: complete other word form as well.
         else -> {return null }
     }
 

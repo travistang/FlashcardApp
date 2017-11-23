@@ -19,11 +19,11 @@ class MainActivity : AppCompatActivity() {
         super.onStart()
         // just temporary: remove me
         val wiki = WiktionaryService()
-        wiki.search("schreiben",{observable ->
+        wiki.search("Fenster",{observable ->
             observable.doOnNext {
                 entry ->
                 val text = findViewById<TextView>(R.id.hello_text)
-                runOnUiThread(Runnable { text.text = entry.toString() })
+                runOnUiThread{ text.text = entry.toString() }
 
             }.subscribeOn(Schedulers.io()).subscribe()
         })

@@ -41,6 +41,7 @@ enum class Form(val cls: KClass<out Any>)
 data class Noun(
         override val word: String,
         override val meaning: List<String>,
+        val genitive: String,
         val gender: Gender,
         val plural: String
 
