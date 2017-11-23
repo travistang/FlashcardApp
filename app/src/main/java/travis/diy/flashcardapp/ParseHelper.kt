@@ -86,7 +86,6 @@ fun parseLanguageSection(deContent: String,word: String): Entry?
     */
     val subSentenceMap = content!!.split("#").mapNotNull(parseSubSentences)
     var meaning : MutableList<String> = mutableListOf() // list of meaning, will be concatenated by ";"
-
     if (subSentenceMap.isEmpty())
     {
         // TODO: probably no word form input... Allow listener as input and call it when this encounters to request another entry
@@ -166,7 +165,7 @@ fun parseLanguageSection(deContent: String,word: String): Entry?
                         // keep retrieving the meaning until a "star" is seen at the beginning of the sentence
                         meaning = content!!.split("#")
                                 .subList(i + 1,content!!.count { c -> c == '#'})
-                                .takeWhile { part -> part[0] != '*' }
+                                .takeWhile { part -> part[0] !in listOf(':','*') }
                         return try {
                              Noun(
                                      word = word,
@@ -187,7 +186,62 @@ fun parseLanguageSection(deContent: String,word: String): Entry?
             return null // no sub-sentences, wtf..
         } // end of noun-parsing
 
-//        "Adjective" ->
+        "Adjective" -> {
+            var comp : String? = null
+            var sup: String? = null
+            var meaning: List<String>? = null
+            subSentenceMap.forEachIndexed {
+                i,(dcParts,subsentenceContent) ->
+                    when
+                    {
+                        dcParts[0] == "de-adj" ->
+                        {
+                            comp = dcParts[1]
+                            sup = dcParts[2]
+
+                            // some regular adj.
+                            if(comp!! in listOf("er","r"))
+                            {
+                                comp = word + comp
+                            }
+                            if(sup!! in listOf("ten","sten"))
+                            {
+                                sup = word + sup
+                            }
+
+                            // now deal wit the meaning of the adj.
+                            val partialMeaningList = content!!.split("#")
+                                    .subList(i + 1,content!!.count { c -> c == '#'})
+                                    // get the meaning while the next entry matches
+                                    .takeWhile { part -> !listOf("""^\*.*""","""^:.+""","""^ \{\{.*""")
+                                            .any{regStr -> regStr.toRegex().matches(part)} }
+                            // append meaning
+                            meaning = if(meaning == null) partialMeaningList else {meaning!! + partialMeaningList}
+
+                        }
+                        dcParts[0] == "lb" -> {
+                            val partialMeaningList = subsentenceContent.split("#")
+                                    // get the meaning while the next entry matches
+                                    .takeWhile { part -> !listOf("""^\*.*""","""^:.+""","""^ \{\{.*""")
+                                            .any{regStr -> regStr.toRegex().matches(part)} }
+                            // append meaning
+                            meaning = if(meaning == null) partialMeaningList else {meaning!! + partialMeaningList}
+                        }
+                    }
+            } // end forEachIndexed
+            return try {
+                Adjective(
+                        word = word,
+                        meaning = meaning!!,
+                        comparative = comp!!,
+                        superlative = sup!!
+                )
+            }catch( _ : Throwable) { return null}
+        }// end adj handling
+//        "Adverb" -> {
+//
+//        }
+
         // TODO: complete other word form as well.
         else -> {return null }
     }

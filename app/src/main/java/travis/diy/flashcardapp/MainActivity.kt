@@ -19,7 +19,7 @@ class MainActivity : AppCompatActivity() {
         super.onStart()
         // just temporary: remove me
         val wiki = WiktionaryService()
-        wiki.search("Fenster",{observable ->
+        wiki.search("lustig",{observable ->
             observable.doOnNext {
                 entry ->
                 val text = findViewById<TextView>(R.id.hello_text)
