@@ -2,6 +2,9 @@ package travis.diy.flashcardapp
 
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
+import android.widget.TextView
+import org.w3c.dom.Text
+import rx.schedulers.Schedulers
 
 class MainActivity : AppCompatActivity() {
 
@@ -18,8 +21,11 @@ class MainActivity : AppCompatActivity() {
         val wiki = WiktionaryService()
         wiki.search("schreiben",{observable ->
             observable.doOnNext {
-                entry -> System.out.println(entry.toString())
-            }.subscribe()
+                entry ->
+                val text = findViewById<TextView>(R.id.hello_text)
+                runOnUiThread(Runnable { text.text = entry.toString() })
+
+            }.subscribeOn(Schedulers.io()).subscribe()
         })
 
     }

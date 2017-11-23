@@ -1,71 +1,74 @@
 package travis.diy.flashcardapp
 
-import java.util.Comparator
-
+import java.util.regex.Matcher
+import java.util.regex.Pattern
 /**
  * Created by travistang on 8/11/2017.
  */
 // helper function for retrieving a section
 // a section is something like ==...==...........
-fun nSectionRegex(n: Int): Regex
+fun nSectionRegex(n: Int): Pattern
 {
     val eq = "=".repeat(n)
-    return """(?<!=)$eq(?<tag>[^=]*?)$eq(?!=)(?<content>.+?)(?=(?<!=)={2,$n}(?!=)|${'$'})""".toRegex()
+    return Pattern.compile("""(?<!=)$eq(?<tag>[^=]*?)$eq(?!=)(?<content>.+?)(?=(?<!=)={2,$n}(?!=)|${'$'})""")
 }
 
+fun getTagsAndComments(str: String,regex: String) : Pair<String,String>?
+{
+    val matcher = Pattern.compile(regex).matcher(str)
+    while(matcher.find())
+    {
+        return Pair(matcher.group("tag"),matcher.group("content"))
+    }
+    return null
+}
 /*
     Expect a string of wikiText of the german section
     i.e. the string should be of the form ==German==.........===....===......
     This converts such string into an entry object, or return null if such string is in an invalid format
  */
-fun parseLanguageSection(germanSectionMatchResult: MatchResult,word: String): Entry?
+fun parseLanguageSection(deContent: String,word: String): Entry?
 {
     // some helper functions
-    val doubleCurlyBracketRegex = "\\{\\{(?<tag>.+?)}}"
-
+    val doubleCurlyBracketRegex = "\\{\\{(?<tag>.+?)\\}\\}"
     // convert a string followed by a triple-equal section to a map of {{...|..|....}} -> ...
     // where the key is the tags inside each double-curly brackets found in the string
     // and the value is the string following the double-curly brackets
     val parseSubSentences : (String) -> Pair<List<String>,String>? = fun(s) : Pair<List<String>,String>?
     {
-        val match = """$doubleCurlyBracketRegex(?<content>[^#{]+)"""
-                .toRegex()
-                .find(s)?:return null
-
-        return Pair(match.groups["tag"]!!.value.split("|"),match.groups["content"]!!.value)
+        val (tag,content) = getTagsAndComments(s,"""$doubleCurlyBracketRegex(?<content>[^#{]+)""")?: return null
+        return Pair(tag.split("|"),content)
     }
 
     val partOfSpeeches = arrayOf("Verb","Noun","Pronoun","Adjective","Adverb")
     // extract useful content
     // which means ==deTag==deContent...
-    val deContent = germanSectionMatchResult.groups["content"]!!
 
     // purify string
-    var curstr = deContent.value
+    var curstr = deContent
 
     // remove 4 double-equal sections
-    curstr = nSectionRegex(4).replace(curstr,"") // remove sections with 4 equals (Ethmology...)
+    curstr = nSectionRegex(4).matcher(curstr).replaceAll("") // remove sections with 4 equals (Ethmology...)
             .replace("\\n","") // remove newline spaces
             .replace("[[","") // remove open double square brackets
             .replace("]]","") // remove close double square brackets
 
     // curstr should now have the form
     // for each section with format ===...===...{{....|...|...}}......
-    val matchResult = nSectionRegex(3)
-            .findAll(curstr) // find all sections that describes the word form of the given word
-            /*
-                TODO: not sure whether there are words that have multiple word forms in German...
-                Currently only the first word form is processed. Hopefully other word forms can be supported later
-             */
-            .first{ matchResult ->
-                matchResult.groups["tag"]?.value in partOfSpeeches
-            }
-
-    // matching ===*tag*===*content* ...., where tag is one of "Noun","Verb"...
-    val tag = matchResult.groups["tag"]!!.value
-    val content = matchResult.groups["content"]!!.value
+    val matcher = nSectionRegex(3).matcher(curstr)
+    var tag : String? = null
+    var content : String? = null
+    while (matcher.find())
+    {
+        if(matcher.group("tag") in partOfSpeeches)
+        {
+            tag = matcher.group("tag")
+            content = matcher.group("content")
+            break
+        }
+    }
+    if ((tag == null) or (content == null)) return null
     // work on each sub items, starting with *
-    // the
     when (tag)
     {
         "Verb" ->
@@ -81,7 +84,7 @@ fun parseLanguageSection(germanSectionMatchResult: MatchResult,word: String): En
 
 
              */
-            val subSentenceMap = content.split("#").mapNotNull(parseSubSentences)
+            val subSentenceMap = content!!.split("#").mapNotNull(parseSubSentences)
             /*
                 subSentenceMap is now a map with a list of attributes of the double curly brackets found in each "subsentence" (separated by "#")
                 for the above example, this should now be:
@@ -151,10 +154,9 @@ fun parseLanguageSection(germanSectionMatchResult: MatchResult,word: String): En
 
 fun parseEntry(pageStr: String,word: String) : Entry?
 {
+    // "purify" the string first
+    val purifiedString = pageStr.replace("\n"," ")
     //target is to retrieve the ==German==..... section
-   val germanSectionMatchResult = nSectionRegex(2)
-           .findAll(pageStr)
-           .firstOrNull{matchResult ->  matchResult.groups["tag"]!!.value == "German"}
-           ?:return null
-    return parseLanguageSection(germanSectionMatchResult,word)
+    val (_,content) = getTagsAndComments(purifiedString, nSectionRegex(2).pattern())?: return null
+    return parseLanguageSection(content,word)
 }
