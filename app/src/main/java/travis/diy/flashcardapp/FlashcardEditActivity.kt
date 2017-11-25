@@ -1,9 +1,14 @@
 package travis.diy.flashcardapp
 
+import android.content.Intent
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
+import android.support.design.widget.Snackbar
 import android.support.design.widget.TextInputEditText
 import android.text.Editable
+import android.view.ContextMenu
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.widget.*
 import com.mobsandgeeks.saripaar.annotation.NotEmpty
@@ -29,9 +34,11 @@ class FlashcardEditActivity : AppCompatActivity() {
         this.text = intent.extras.get("text") as String
 
         setContentView(R.layout.flashcard_edit)
+
         // configure widgets
         title = "Editing %s".format(text)
 
+        // configure entry detail form
         textSection = findViewById<TextInputEditText>(R.id.german_text)
         translationSection = findViewById<TextInputEditText>(R.id.translation_text)
         formSpinner = findViewById<Spinner>(R.id.form)
@@ -209,4 +216,20 @@ class FlashcardEditActivity : AppCompatActivity() {
         }
     }
 
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.flashcard_edit_menu,menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem?): Boolean {
+        if (item?.itemId == R.id.flashcard_add)
+        {
+            val intent = Intent()
+            intent.putExtra("entry",entry)
+            setResult(444,intent)
+            // TODO: really save the flashcard
+            finish()
+        }
+        return true
+    }
 }

@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
+import android.support.design.widget.Snackbar
 import android.widget.RelativeLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -176,5 +177,20 @@ class MainActivity : AppCompatActivity() {
         intent.putExtra("entry",entry)
         intent.putExtra("text",text)
         startActivityForResult(intent,444)
+
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        when(requestCode)
+        {
+            444 -> // flashcard adding result
+            {
+                Snackbar.make(findViewById(R.id.mainView),"Flashcard added",Snackbar.LENGTH_SHORT)
+                        .setAction("Undo",{view ->
+                            // TODO: undo adding flashcard
+                        })
+                        .show()
+            }
+        }
     }
 }
