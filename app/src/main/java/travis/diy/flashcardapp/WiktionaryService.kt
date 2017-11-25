@@ -84,8 +84,8 @@ class WiktionaryService {
                 ))
 
         // get the title of the word
-        val title = obj.getElementsByTagName("page").item(0).attributes.getNamedItem("title").nodeValue
-        val dictString = obj.getElementsByTagName("rev").item(0).textContent
+        val title = obj.getElementsByTagName("page")?.item(0)?.attributes?.getNamedItem("title")?.nodeValue?:return Error.NO_SUCH_WORD
+        val dictString = obj.getElementsByTagName("rev")?.item(0)?.textContent?:return Error.NO_SUCH_WORD
         // TODO: parse this string
         // TODO: remove me
         // TODO: how about adding listener to call for event?

@@ -2,6 +2,8 @@ package travis.diy.flashcardapp
 
 import android.app.AlertDialog
 import android.app.DialogFragment
+import android.content.Context
+import android.content.Intent
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.RelativeLayout
@@ -54,6 +56,7 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 override fun onClose(): Boolean {
+                    searchBox?.hideProgress()
                     return true
                 }
             })
@@ -72,7 +75,7 @@ class MainActivity : AppCompatActivity() {
                                         payload ->
                                         if (payload is Error)
                                             runOnUiThread {
-                                                Toast.makeText(this@MainActivity, payload.toString(), Toast.LENGTH_LONG).show()
+                                                challengeUserOnError(text)
                                             }
                                     }
                                     .onErrorReturn { _ -> null }
@@ -140,10 +143,10 @@ class MainActivity : AppCompatActivity() {
         runOnUiThread{
             if(entry == null)
             {
-                challengeUserOnError("text")
+                challengeUserOnError(text)
             }
             else {
-                Toast.makeText(this@MainActivity, entry?.toString(), Toast.LENGTH_SHORT).show()
+                startFlashcardEditActivity(entry,text)
                 searchBox?.hideSuggestions()
             }
         }
@@ -153,10 +156,10 @@ class MainActivity : AppCompatActivity() {
     {
         // TODO: make a pop-up box to warn the user something has occurred, ask if they should proceed
         AlertDialog.Builder(this)
-                .setMessage("The word you choose is either not a german word, or is not a verb/noun/adjective/adverb. Do you want to make a flashcard for this word anyway?")
+                .setMessage("%s is either not a german word, or is not a verb/noun/adjective/adverb. Do you want to make a flashcard for this word anyway?".format(word))
                 .setPositiveButton("Add",{
                     dialog, which ->
-                    // TODO: create an empty activity with this word
+                    startFlashcardEditActivity(null,word)
                 })
                 .setNegativeButton("Cancel", {
                     // The user is not adding words
@@ -170,5 +173,9 @@ class MainActivity : AppCompatActivity() {
     private fun startFlashcardEditActivity(entry: Entry?,text: String)
     {
         // TODO: start the activity here
+        val intent = Intent(this, FlashcardEditActivity::class.java)
+        intent.putExtra("entry",entry)
+        intent.putExtra("text",text)
+        startActivityForResult(intent,444)
     }
 }
