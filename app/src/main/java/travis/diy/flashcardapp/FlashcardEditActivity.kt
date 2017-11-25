@@ -21,6 +21,8 @@ class FlashcardEditActivity : AppCompatActivity() {
     @NotEmpty
     private lateinit var formSpinner: Spinner
 
+    private lateinit var formDetailValidationFun : () -> Boolean
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         this.entry = intent.extras.get("entry") as Entry?
@@ -63,7 +65,6 @@ class FlashcardEditActivity : AppCompatActivity() {
                 // first remove all view groups...
                 when(formList[position])
                 {
-                // TODO: fill in the missing functions
                     "Verb" ->
                     {
                         val layout = layoutInflater.inflate(R.layout.verb_details_layout,viewGroup)
@@ -92,8 +93,12 @@ class FlashcardEditActivity : AppCompatActivity() {
 
                         populateFormDetails(entry,widgets)
                     }
-                    "Adjective" -> {}
-                    "Adverb" -> {}
+                    in listOf("Adjective","Adverb") -> {
+                        val layout = layoutInflater.inflate(R.layout.adj_details_layout,viewGroup)
+                        val widgets = getFormDetailsWidgets(Form.ADJ,layout) // whether its an adj or adv should matter here
+                        populateFormDetails(entry,widgets)
+                    }
+                    else -> {} // impossible
                 }
             }
             override fun onNothingSelected(parent: AdapterView<*>?) {
@@ -137,7 +142,12 @@ class FlashcardEditActivity : AppCompatActivity() {
                         "plural" to detailLayout.findViewById<TextInputEditText>(R.id.plural)
                 )
             }
-            else -> {emptyMap()} // TODO: gather the widgets for the rest of the word form here
+            else -> { // adj/adv
+                mapOf(
+                        "comparative" to detailLayout.findViewById<TextInputEditText>(R.id.comparative),
+                        "superlative" to detailLayout.findViewById<TextInputEditText>(R.id.superlative)
+                )
+            }
         }
 
     private fun populateFormDetails(entry: Entry?, widgets: Map<String,View>)
@@ -148,28 +158,33 @@ class FlashcardEditActivity : AppCompatActivity() {
             is Verb ->
             {
                 // TODO: can this not be that hard-coded??
-                (widgets["aux"] as Spinner).setSelection(if(entry.aux == "sein") 1 else 0) // 0 includes "haben" es well...
+                with(widgets["aux"] as Spinner) {
+                    setSelection(if (entry.aux == "sein") 1 else 0) // default is 0 (i.e. haben)...}
+                    isEnabled = false
+                }
                 // the rest is just the same... map it
                 listOf("present_tense","past_tense","perfect_tense").forEach {
                     tense -> (widgets[tense] as TextInputEditText).text = Editable.Factory().newEditable(when(tense)
                     {
-                         "present_tense" -> entry.singleSimplePresent
-                            "past_tense" -> entry.pastTense
-                         "perfect_tense" -> entry.perfect
-                                    else -> ""      // this is impossible, but anyways...
+                        "present_tense" -> entry.singleSimplePresent
+                        "past_tense" -> entry.pastTense
+                        "perfect_tense" -> entry.perfect
+                        else -> ""      // this is impossible, but anyways...
                     })
                 }
+
             }
 
             is Noun ->
             {
-                (widgets["gender"] as Spinner).setSelection(when(entry.gender)
-                {
-                    Gender.DER -> 0
-                    Gender.DIE -> 1
-                    Gender.DAS -> 2
-                })
-
+                with(widgets["gender"] as Spinner) {
+                    setSelection(when (entry.gender) {
+                        Gender.DER -> 0
+                        Gender.DIE -> 1
+                        Gender.DAS -> 2
+                    })
+                    isEnabled = false
+                }
                 // the rest is ... also the same
                 listOf("genitive","plural").forEach {
                     form -> (widgets[form] as TextInputEditText).text = Editable.Factory().newEditable(when(form)
@@ -179,9 +194,18 @@ class FlashcardEditActivity : AppCompatActivity() {
                     })
                 }
             }
-            else -> {
-                // TODO: populate form details given other word form
+
+            is Adjective -> { // Adjective / Adverb
+                (widgets["comparative"] as TextInputEditText).text = Editable.Factory().newEditable(entry.comparative)
+                (widgets["superlative"] as TextInputEditText).text = Editable.Factory().newEditable(entry.superlative)
             }
+
+            is Adverb -> {
+                (widgets["comparative"] as TextInputEditText).text = Editable.Factory().newEditable(entry.comparative)
+                (widgets["superlative"] as TextInputEditText).text = Editable.Factory().newEditable(entry.superlative)
+            }
+
+            else -> {} // Impossible
         }
     }
 

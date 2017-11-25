@@ -164,7 +164,7 @@ fun parseLanguageSection(deContent: String,word: String): Entry?
                     dcParts[0] == "de-noun" ->
                     {
                         genitive = dcParts[2].replace("^.*=","")
-                        plural = dcParts[3]
+                        plural = dcParts[3].replace("^.*=","")
                         // keep retrieving the meaning until a "star" is seen at the beginning of the sentence
                         meaning = content!!.split("#")
                                 .subList(i + 1,content!!.count { c -> c == '#'} + 1)
