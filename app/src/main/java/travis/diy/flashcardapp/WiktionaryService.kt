@@ -15,8 +15,11 @@ import javax.xml.parsers.DocumentBuilderFactory
  */
 class WiktionaryService {
     private var url = "https://en.wiktionary.org/w/api.php?format=xml&action=query&titles=%s&rvprop=content&prop=revisions&redirects=1"
+    private var openUrl = "https://en.wiktionary.org/w/api.php?action=opensearch&limit=5&format=xml&search=%s"
     private var subscription: Subscription? = null
+    private var openSearchSubscription: Subscription? = null
     private var queryObservable: Observable<in Entry?>? = null
+    private var openSearchObservable: Observable<List<String>>? = null
     fun stopSearching()
     {
         subscription?.unsubscribe()
@@ -95,4 +98,41 @@ class WiktionaryService {
         if (observable != null) subscription = mapAndSubscription(observable)
     }
 
+    fun opensearch(str: String,mapAndSubscription: (Observable<List<String>>) -> Subscription)
+    {
+        openSearchObservable = Observable.unsafeCreate<List<String>>{
+            t: Subscriber<in List<String>>? ->
+            val request = Request.Builder()
+                    .url(openUrl.format(str))
+                    .build()
+            OkHttpClient().newCall(request).enqueue(object: Callback {
+                override fun onResponse(call: Call?, response: Response?) {
+                    // TODO: parse the incoming json/xml
+                    val content = response?.body()?.string()?:run{
+                        t?.onError(Throwable(Error.BAD_RESPONSE.toString()))
+                        return
+                    }
+                    // parsing the incoming xml
+                    val dbf = DocumentBuilderFactory.newInstance()
+                    val db = dbf.newDocumentBuilder()
+                    val inputSource = InputSource()
+                    inputSource.characterStream = StringReader(content)
+
+                    val obj = db.parse(inputSource)
+                    val textList = obj.getElementsByTagName("Text")
+                    val res = mutableListOf<String>()
+                    (0 until textList.length).forEach {
+                        i -> res.add(textList.item(i).textContent)
+                    }
+                    t?.onNext(res)
+                }
+
+                override fun onFailure(call: Call?, e: IOException?) {
+                    t?.onError(e)
+                }
+            })
+        }
+        // and subscribe it
+        openSearchSubscription = mapAndSubscription(openSearchObservable!!)
+    }
 }

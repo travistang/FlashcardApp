@@ -36,7 +36,6 @@ enum class Form(val cls: KClass<out Any>)
     NOUN(Noun::class),
     ADJ(Adjective::class),
     ADV(Adverb::class),
-    PRONOUN(Pronoun::class),
 }
 data class Noun(
         override val word: String,
@@ -54,10 +53,9 @@ data class Adjective(
         val superlative: String
 ) : Entry(word,meaning,Form.ADJ)
 
+//typealias Adverb = Adjective
 data class Adverb(override val word: String,
-                  override val meaning: List<String>
+                  override val meaning: List<String>,
+                  val comparative: String?,
+                  val superlative: String?
 ) : Entry(word,meaning,Form.ADV)
-
-data class Pronoun(override val word: String,
-            override val meaning: List<String>
-) : Entry(word,meaning,Form.PRONOUN)

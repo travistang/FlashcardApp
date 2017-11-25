@@ -13,14 +13,15 @@ fun nSectionRegex(n: Int): Pattern
     return Pattern.compile("""(?<!=)$eq(?<tag>[^=]*?)$eq(?!=)(?<content>.+?)(?=(?<!=)={2,$n}(?!=)|${'$'})""")
 }
 
-fun getTagsAndComments(str: String,regex: String) : Pair<String,String>?
+fun getTagsAndComments(str: String,regex: String) : Map<String,String>
 {
     val matcher = Pattern.compile(regex).matcher(str)
+    val res = mutableMapOf<String,String>()
     while(matcher.find())
     {
-        return Pair(matcher.group("tag"),matcher.group("content"))
+        res[matcher.group("tag")] = matcher.group("content")
     }
-    return null
+    return res.toMap()
 }
 /*
     Expect a string of wikiText of the german section
@@ -36,11 +37,13 @@ fun parseLanguageSection(deContent: String,word: String): Entry?
     // and the value is the string following the double-curly brackets
     val parseSubSentences : (String) -> Pair<List<String>,String>? = fun(s) : Pair<List<String>,String>?
     {
-        val (tag,content) = getTagsAndComments(s,"""$doubleCurlyBracketRegex(?<content>[^#{]+)""")?: return null
+        val (tag,content) = getTagsAndComments(s,"""$doubleCurlyBracketRegex(?<content>[^#{]+)""")
+                .toList()
+                .firstOrNull()?: return null
         return Pair(tag.split("|"),content)
     }
 
-    val partOfSpeeches = arrayOf("Verb","Noun","Pronoun","Adjective","Adverb")
+    val partOfSpeeches = arrayOf("Verb","Noun","Adjective","Adverb")
     // extract useful content
     // which means ==deTag==deContent...
 
@@ -164,7 +167,7 @@ fun parseLanguageSection(deContent: String,word: String): Entry?
                         plural = dcParts[3]
                         // keep retrieving the meaning until a "star" is seen at the beginning of the sentence
                         meaning = content!!.split("#")
-                                .subList(i + 1,content!!.count { c -> c == '#'})
+                                .subList(i + 1,content!!.count { c -> c == '#'} + 1)
                                 .takeWhile { part -> part[0] !in listOf(':','*') }
                         return try {
                              Noun(
@@ -211,7 +214,7 @@ fun parseLanguageSection(deContent: String,word: String): Entry?
 
                             // now deal wit the meaning of the adj.
                             val partialMeaningList = content!!.split("#")
-                                    .subList(i + 1,content!!.count { c -> c == '#'})
+                                    .subList(i + 1,content!!.count { c -> c == '#'} + 1)
                                     // get the meaning while the next entry matches
                                     .takeWhile { part -> !listOf("""^\*.*""","""^:.+""","""^ \{\{.*""")
                                             .any{regStr -> regStr.toRegex().matches(part)} }
@@ -237,11 +240,61 @@ fun parseLanguageSection(deContent: String,word: String): Entry?
                         superlative = sup!!
                 )
             }catch( _ : Throwable) { return null}
-        }// end adj handling
-//        "Adverb" -> {
-//
-//        }
+        }// end adj/adv handling
 
+        "Adverb" ->
+        {
+            var comp : String? = null
+            var sup: String? = null
+            var meaning: List<String>? = null
+            subSentenceMap.forEachIndexed {
+                i,(dcParts,subsentenceContent) ->
+                when
+                {
+                    dcParts[0] == "de-adv" ->
+                    {
+                        comp = dcParts.getOrNull(1)
+                        sup = dcParts.getOrNull(2)
+
+                        // some regular adj.
+                        if(comp in listOf("er","r"))
+                        {
+                            comp = word + comp
+                        }
+                        if(sup in listOf("ten","sten"))
+                        {
+                            sup = word + sup
+                        }
+
+                        // now deal wit the meaning of the adj.
+                        val partialMeaningList = content!!.split("#")
+                                .subList(i + 1,content!!.count { c -> c == '#'} + 1)
+                                // get the meaning while the next entry matches
+                                .takeWhile { part -> !listOf("""^\*.*""","""^:.+""","""^ \{\{.*""")
+                                        .any{regStr -> regStr.toRegex().matches(part)} }
+                        // append meaning
+                        meaning = if(meaning == null) partialMeaningList else {meaning!! + partialMeaningList}
+
+                    }
+                    dcParts[0] == "lb" -> {
+                        val partialMeaningList = subsentenceContent.split("#")
+                                // get the meaning while the next entry matches
+                                .takeWhile { part -> !listOf("""^\*.*""","""^:.+""","""^ \{\{.*""")
+                                        .any{regStr -> regStr.toRegex().matches(part)} }
+                        // append meaning
+                        meaning = if(meaning == null) partialMeaningList else {meaning!! + partialMeaningList}
+                    }
+                }
+            } // end forEachIndexed
+            return try {
+                Adverb(
+                        word = word,
+                        meaning = meaning!!,
+                        comparative = comp,
+                        superlative = sup
+                )
+            }catch( _ : Throwable) { return null}
+        }
         // TODO: complete other word form as well.
         else -> {return null }
     }
@@ -253,6 +306,9 @@ fun parseEntry(pageStr: String,word: String) : Entry?
     // "purify" the string first
     val purifiedString = pageStr.replace("\n"," ")
     //target is to retrieve the ==German==..... section
-    val (_,content) = getTagsAndComments(purifiedString, nSectionRegex(2).pattern())?: return null
+    val (_,content) = getTagsAndComments(purifiedString, nSectionRegex(2).pattern())
+            .toList()
+            .firstOrNull{(tag,_) -> tag == "German"}
+            ?: return null
     return parseLanguageSection(content,word)
 }
