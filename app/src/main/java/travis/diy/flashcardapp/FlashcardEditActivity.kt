@@ -12,6 +12,7 @@ import android.view.MenuItem
 import android.view.View
 import android.widget.*
 import com.mobsandgeeks.saripaar.annotation.NotEmpty
+import org.w3c.dom.Text
 
 class FlashcardEditActivity : AppCompatActivity() {
     private var entry: Entry? = null
@@ -224,6 +225,7 @@ class FlashcardEditActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem?): Boolean {
         if (item?.itemId == R.id.flashcard_add)
         {
+            if(!validateFlashcard()) return false
             val intent = Intent()
             intent.putExtra("entry",entry)
             setResult(444,intent)
@@ -231,5 +233,75 @@ class FlashcardEditActivity : AppCompatActivity() {
             finish()
         }
         return true
+    }
+
+    /*
+        Validate the flashcard
+     */
+    private fun validateFlashcard(): Boolean
+    {
+        /*
+            Find out all non-null empty fields
+         */
+        val isEmpty : (Int).() -> Boolean =
+        {
+            findViewById<TextInputEditText>(this).text.isBlank()
+        }
+        // first is the mandatory one
+        val textEntry = mutableListOf(R.id.german_text,R.id.translation_text)
+        // second is the details depending on the form
+
+        val form = when(formSpinner.selectedItem as String)
+        {
+            "Verb" -> Form.VERB
+            "Noun" -> Form.NOUN
+            "Adjective" -> Form.ADJ
+            else -> Form.ADV
+        }
+        val nullableFields : List<Int> = when (form)
+        {
+            Form.ADJ -> emptyList()
+            Form.ADV -> listOf(R.id.comparative,R.id.superlative)
+            Form.VERB -> emptyList()
+            Form.NOUN -> listOf(R.id.genitive)
+        }
+        val emptyDetailFields = getFormDetailsWidgets(form,findViewById(R.id.form_details))
+                .values
+                .filter{widget -> widget is TextInputEditText}
+                .filter{widget -> (widget as TextInputEditText).text.isBlank()}
+                .map{widget -> widget.id} - nullableFields
+
+        val idToNameDict = mapOf(
+                R.id.german_text to "German word",
+                R.id.translation_text to "Translation",
+                // verb fields
+                R.id.present_tense to "Present Tense",
+                R.id.past_tense to "Past Tense",
+                R.id.perfect_tense to "Perfect Tense",
+                // noun fields
+                R.id.plural to "Plural",
+                // adj/adv fields
+                R.id.comparative to "Comparative",
+                R.id.superlative to "Superlative"
+        )
+        // combine both sections
+        val emptyField = textEntry.filter{id -> id.isEmpty()}
+        val errorField = emptyDetailFields + emptyField
+        val errorMessage = errorField
+                .map{
+                    id -> "%s field".format(idToNameDict[id])
+                }.take(2).joinToString(", ")
+        Snackbar.make(
+                findViewById(R.id.edit_menu),
+                errorMessage +
+                        if(errorField.size > 2)
+                            " and %d other field(s) are empty".format(errorField.size - 2)
+                        else " %s empty".format(if(errorField.size == 1) "is" else "are"),
+                Snackbar.LENGTH_LONG
+        )
+                .show()
+        return emptyField.isEmpty()
+
+        // TODO: check if the word has been added before
     }
 }
