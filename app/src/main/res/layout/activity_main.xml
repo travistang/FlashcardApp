@@ -11,11 +11,5 @@
         android:id="@+id/searchView"
         app:layout_behavior="com.lapism.searchview.SearchBehavior"
     />
-    <TextView
-        android:id="@+id/hello_text"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Hello World!"
-    />
 
 </android.support.design.widget.CoordinatorLayout>

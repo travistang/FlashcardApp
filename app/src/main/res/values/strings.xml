@@ -1,3 +1,20 @@
 <resources>
     <string name="app_name">FlashcardApp</string>
+    <string-array name="word_form">
+        <item>Verb</item>
+        <item>Noun</item>
+        <item>Adjective</item>
+        <item>Adverb</item>
+    </string-array>
+    <string-array name="gender">
+        <item>Masculine</item>
+        <item>Feminine</item>
+        <item>Neuter</item>
+    </string-array>
+
+    <string-array name="aux">
+        <item>Haben</item>
+        <item>Sein</item>
+    </string-array>
+
 </resources>

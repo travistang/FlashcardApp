@@ -52,6 +52,5 @@ dependencies {
 
     // form validation / widgets
     compile 'com.wrapp.floatlabelededittext:library:0.0.6'
-    compile 'me.grantland:autofittextview:0.2.+'
-
+    compile 'com.mobsandgeeks:android-saripaar:2.0.3'
 }
