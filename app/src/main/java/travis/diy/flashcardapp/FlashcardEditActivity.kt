@@ -5,11 +5,8 @@ import android.os.Bundle
 import android.support.design.widget.TextInputEditText
 import android.text.Editable
 import android.view.View
-import android.view.ViewGroup
 import android.widget.*
 import com.mobsandgeeks.saripaar.annotation.NotEmpty
-import org.jetbrains.annotations.NotNull
-import org.w3c.dom.Text
 
 class FlashcardEditActivity : AppCompatActivity() {
     private var entry: Entry? = null
@@ -64,16 +61,12 @@ class FlashcardEditActivity : AppCompatActivity() {
                 // empty all views
                 viewGroup.removeAllViews()
                 // first remove all view groups...
-                val layout = layoutInflater.inflate(when(formList[position])
-                {
-                    "Verb" -> R.layout.verb_details_layout
-                    else   -> R.layout.verb_details_layout // TODO: remove me
-                },viewGroup)
                 when(formList[position])
                 {
                 // TODO: fill in the missing functions
                     "Verb" ->
                     {
+                        val layout = layoutInflater.inflate(R.layout.verb_details_layout,viewGroup)
                         val widgets = getFormDetailsWidgets(Form.VERB,layout)
                         val auxAdapter = ArrayAdapter.createFromResource(
                                 this@FlashcardEditActivity,
@@ -85,9 +78,20 @@ class FlashcardEditActivity : AppCompatActivity() {
 
                         // configure aux. verb
                         populateFormDetails(entry,widgets)
-
                     }
-                    "Noun" -> {}
+                    "Noun" -> {
+                        val layout = layoutInflater.inflate(R.layout.noun_details_layout,viewGroup)
+                        val widgets = getFormDetailsWidgets(Form.NOUN,layout)
+                        val genderAdapter = ArrayAdapter.createFromResource(
+                                this@FlashcardEditActivity,
+                                R.array.gender,
+                                android.R.layout.simple_spinner_item
+                        )
+                        genderAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                        (widgets["gender"] as Spinner).adapter = genderAdapter
+
+                        populateFormDetails(entry,widgets)
+                    }
                     "Adjective" -> {}
                     "Adverb" -> {}
                 }
@@ -125,6 +129,14 @@ class FlashcardEditActivity : AppCompatActivity() {
                         "perfect_tense" to detailLayout.findViewById<TextInputEditText>(R.id.perfect_tense)
                 )
             }
+            Form.NOUN ->
+            {
+                mapOf(
+                        "gender" to detailLayout.findViewById<Spinner>(R.id.gender),
+                        "genitive" to detailLayout.findViewById<TextInputEditText>(R.id.genitive),
+                        "plural" to detailLayout.findViewById<TextInputEditText>(R.id.plural)
+                )
+            }
             else -> {emptyMap()} // TODO: gather the widgets for the rest of the word form here
         }
 
@@ -145,6 +157,25 @@ class FlashcardEditActivity : AppCompatActivity() {
                             "past_tense" -> entry.pastTense
                          "perfect_tense" -> entry.perfect
                                     else -> ""      // this is impossible, but anyways...
+                    })
+                }
+            }
+
+            is Noun ->
+            {
+                (widgets["gender"] as Spinner).setSelection(when(entry.gender)
+                {
+                    Gender.DER -> 0
+                    Gender.DIE -> 1
+                    Gender.DAS -> 2
+                })
+
+                // the rest is ... also the same
+                listOf("genitive","plural").forEach {
+                    form -> (widgets[form] as TextInputEditText).text = Editable.Factory().newEditable(when(form)
+                    {
+                        "genitive" -> entry.genitive
+                              else -> entry.plural
                     })
                 }
             }
